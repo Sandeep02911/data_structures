@@ -452,13 +452,20 @@ vector<int> boundaryTraversal(TreeNode* root) {
 	return ans;
 }
 
-int maxPathSum(TreeNode* root) {
+int getMaxPathSumHelper(TreeNode* root, int& max_) {
 	if(!root) return 0;
 
-	int lsum = maxPathSum(root->left);
-	int rsum = maxPathSum(root->right);
+	int lsum = max(0, getMaxPathSumHelper(root->left, max_));
+	int rsum = max(0, getMaxPathSumHelper(root->right, max_));
+	max_ = max(max_, root->val + lsum + rsum);
 
-	return max(root->val + lsum + rsum, max(lsum, rsum));
+	return root->val + max(lsum , rsum);
+}
+
+int getMaxPathSum(TreeNode* root) {
+	int max_ = INT_MIN;
+	getMaxPathSumHelper(root, max_);
+	return max_;
 }
 
 TreeNode* buildTreeFromPreAndInHelper(vector<int>& preorder, vector<int>& inorder, int inSt, int inEnd, int preSt, unordered_map<int, int>& mp) {
@@ -507,6 +514,110 @@ TreeNode* buildTreeFromPostAndIn(vector<int>& postorder, vector<int>& inorder) {
 	// cout<<"node->val : "<<node->val<<endl;
 	// printv(getlevelOrderTraversal(node));
 	return node;
+}
+
+TreeNode* mirror(TreeNode* root) {
+	if(!root) return NULL;
+
+	TreeNode* l = mirror(root->left);
+	TreeNode* r = mirror(root->right);
+	root->right = l;
+	root->left = r;
+
+	return root;
+}
+
+TreeNode* mirror2(TreeNode* root) {
+	if(!root) return root;
+
+	queue<TreeNode*> que;
+	que.push(root);
+	while(que.size()) {
+		TreeNode* node = que.front();
+		que.pop();
+
+		swap(root->left, root->right);
+		if(root->left) que.push(root->left);
+		if(root->right) que.push(root->right);
+	}
+
+	return root;
+}
+
+bool isSameTree(TreeNode* root1, TreeNode* root2) {
+	if(!root1 && !root2) return true;
+	if(!root1 || !root2) return false;
+
+	return root1->val == root2->val && isSameTree(root1->left, root2->right) && isSameTree(root1->right, root2->left);
+}
+
+bool isTreeSymmetric(TreeNode* root) {
+	if(!root) return true;
+	return isSameTree(root->left, root->right);
+}
+
+
+TreeNode* prevNode = NULL;
+void flattenBinaryTree(TreeNode* root) {
+	if(!root) return;
+
+	flattenBinaryTree(root->right);
+	flattenBinaryTree(root->left);
+
+	root->left = NULL;
+	root->right = prevNode;
+	prevNode = root;
+}
+
+void flattenBinaryTree2(TreeNode* root) {
+	if(!root) return;
+
+	while(root) {
+		TreeNode* curr = root->left;
+		if(curr) {
+			while(curr->right) curr = curr->right;
+			curr->right = root->right;
+			root->right = root->left;
+			root->left = NULL;
+		}
+		root = root->right;
+	}
+}
+
+void printFlattenTree(TreeNode* root) {
+	while(root) {
+		cout<<root->val<<" ";
+		root = root->right;
+	}
+
+	cout<<endl;
+}
+
+void changeTreeToChildrenSumPropertyHelper(TreeNode* root, int &diff) {
+	if(!root) return;
+
+	root->val += diff;
+	if(root->left)
+		changeTreeToChildrenSumPropertyHelper(root->left, diff);
+	else 
+		changeTreeToChildrenSumPropertyHelper(root->right, diff);
+}
+
+void changeTreeToChildrenSumProperty(TreeNode* root) {
+	if(!root) return;
+
+	changeTreeToChildrenSumProperty(root->left);
+	changeTreeToChildrenSumProperty(root->right);
+
+	int diff = root->val;
+	if(root->left) diff -= root->left->val;
+	if(root->right) diff -= root->right->val;
+	if(diff > 0) {
+		if(root->left) changeTreeToChildrenSumPropertyHelper(root->left, diff);
+		else changeTreeToChildrenSumPropertyHelper(root->right, diff);
+	} else if(diff < 0) {
+		root->val -= diff;
+	}
 }
 
 void solve() {
@@ -573,18 +684,52 @@ void solve() {
 	cout<<"boundaryTraversal: ";
 	printv(bt);
 
+
 	vector<int> inorder{9,3,15,20,7};
 
+	cout<<endl;
 	vector<int> preorder{3,9,20,15,7};
 	TreeNode* treeFromPreAndIn = buildTreeFromPreAndIn(preorder, inorder);
 	cout<<treeFromPreAndIn->val<<endl;
 	cout<<"Level order traversal of treeFromPreAndIn:"<<endl;
 	printv(getlevelOrderTraversal(treeFromPreAndIn));
 
+	cout<<endl;
 	vector<int> postorder{9,15,7,20,3};
 	TreeNode* treeFromPostAndIn = buildTreeFromPostAndIn(postorder, inorder);
 	cout<<"Level order traversal of treeFromPostAndIn:"<<endl;
 	printv(getlevelOrderTraversal(treeFromPostAndIn));
+
+	cout<<endl;
+	cout<<"Mirror -> "<<endl;
+	cout<<"Old tree: "<<endl;
+	printv(getVerticalOrderTraversal(root));
+	cout<<"Mirrored tree: "<<endl;
+	printv(getVerticalOrderTraversal(mirror(root)));
+
+	cout<<endl;
+	TreeNode* symmetric = buildTree("[1,2,2,3,4,4,3]");
+	bool isSymmetric = isTreeSymmetric(symmetric);
+	cout<<(isSymmetric ? "Tree is symmetric" : "Tree is not symmetric")<<endl;
+
+	cout<<endl;
+	TreeNode* flatten = buildTree("[1,2,5,3,4,null,6]");
+	flattenBinaryTree2(flatten);
+	cout<<"flattened binary tree -> ";
+	printFlattenTree(flatten);
+
+	cout<<endl;
+	TreeNode* maxPathSum = buildTree("[-10,9,20,null,null,15,7]");
+	cout<<"max Path sum is -> "<<getMaxPathSum(maxPathSum);
+
+	cout<<endl;
+	TreeNode* changeTree = buildTree("[50,7,2,3,5,1,30]");
+	cout<<"Change tree to children sum property:"<<endl;
+	cout<<"before changing -> "<<endl;
+	printv(getlevelOrderTraversal(changeTree));
+	changeTreeToChildrenSumProperty(changeTree);
+	cout<<"after change -> "<<endl;
+	printv(getlevelOrderTraversal(changeTree));
 }
 
 
